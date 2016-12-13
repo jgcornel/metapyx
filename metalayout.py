@@ -93,3 +93,12 @@ def same_height(*boxes):
     height = max(box.height for box in boxes)
     for b in boxes:
         b.height = height
+
+def partition_segment(start, stop, fraction):
+
+    point = Point(0, 0)
+
+    point.x = start.x + fraction * (stop.x - start.x)
+    point.y = start.y + fraction * (stop.y - start.y)
+
+    return point

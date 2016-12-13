@@ -174,3 +174,28 @@ class XY(Box):
 
         box.c = Point(x_coord, y_coord)
         self.add_child(box)
+
+""" A labeled arrow horizontal only ... """
+class LabeledArrow(Box):
+
+    def __init__(self, label, width=2, height=1, border=None):
+        
+        super().__init__(width, height, border)
+        self.label = label
+        self.initialize()
+
+    def initialize(self):
+
+        arrow = Connection([self.w, self.e])
+        arrow.add_style_element(deco.earrow(size=0.3))
+        self.add_child(arrow)
+
+        labeltext = Line(self.label)
+        arrow.width = labeltext.width
+        labeltext.s = arrow.n + (0, 0.2)
+        self.add_child(labeltext)
+
+        self.stretch(0.1)
+
+    def colour(self, kleur):
+        self.children[0].add_style_element(kleur)
