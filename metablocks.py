@@ -49,9 +49,9 @@ class Text(Box):
 
         golden = (1 + 5**0.5) / 2
 
-        for l in self.lines:
-            self.dict_[l] = Line(l)
-            self.add_child(self.dict_[l])
+        for line in self.lines:
+            self.dict_[line.string] = line
+            self.add_child(line)
 
         height = max(child.height for child in self.children)
         delta  = 0.66*(golden - 1) * height
