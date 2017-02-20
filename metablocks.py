@@ -31,8 +31,8 @@ class Text(Box):
 
     """ A Text object is a collection of lines """
 
-    def __init__(self, 
-                 lines=[], 
+    def __init__(self,
+                 lines=[],
                  alignment=Alignment.center,
                  size=text.size.normal):
 
@@ -68,7 +68,7 @@ class TextBox(Box):
 
     """ A TextBox object is a Text contained in a Box """
 
-    def __init__(self, 
+    def __init__(self,
                  text,
                  alignment=Alignment.center,
                  **kwargs):
@@ -119,7 +119,7 @@ def staircase_connection_x(from_, to_):
     return Connection([from_, Point(x1, y1), Point(x2, y2), to_])
 
 def create_label(name, size=text.size.LARGE):
-    return TextBox([name], Alignment.center, size, border=None)    
+    return TextBox([name], Alignment.center, size, border=None)
 
 """ a coordinate system """
 class XY(Box):
@@ -147,7 +147,7 @@ class XY(Box):
             self.add_child(axis)
         self.axes['x'] = x_axis
         self.axes['y'] = y_axis
-        
+
         x_label = create_label(self.x_name)
         y_label = create_label(self.y_name)
         x_label.w = x_axis.e
@@ -179,7 +179,7 @@ class XY(Box):
 class LabeledArrow(Box):
 
     def __init__(self, label, width=2, height=1, border=None):
-        
+
         super().__init__(width, height, border)
         self.label = label
         self.initialize()

@@ -17,7 +17,7 @@ def left_to_right(alignment, delta, anchor_box, *boxes):
     box = boxes[0]
 
     if alignment is Alignment.bottom:
-        box.sw = anchor_box.se + (delta, 0) 
+        box.sw = anchor_box.se + (delta, 0)
     elif alignment is Alignment.middle:
         box.w  = anchor_box.e  + (delta, 0)
     elif alignment is Alignment.top:
@@ -83,13 +83,13 @@ def top_to_bottom(alignment, delta, anchor_box, *boxes):
     top_to_bottom(alignment, delta, boxes[0], *(boxes[1:]))
 
 def same_width(*boxes):
-    
+
     width = max(box.width for box in boxes)
     for b in boxes:
         b.width = width
 
 def same_height(*boxes):
-    
+
     height = max(box.height for box in boxes)
     for b in boxes:
         b.height = height

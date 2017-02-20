@@ -19,18 +19,18 @@ class Point:
         return '({:3f}, {:3f})'.format(self.x, self.y)
 
     def __mul__(self, scalar):
-        
+
         return Point(scalar*self.x, scalar*self.y)
 
     def __add__(self, other):
-        
+
         if isinstance(other, self.__class__):
             return Point(self.x + other.x, self.y + other.y)
         elif isinstance(other, tuple):
             return Point(self.x + other[0], self.y + other[1])
 
     def __sub__(self, other):
-        
+
         if isinstance(other, self.__class__):
             return Point(self.x - other.x, self.y - other.y)
         elif isinstance(other, tuple):
@@ -39,7 +39,7 @@ class Point:
 class Box:
 
     def __init__(self, width=1, height=1, border=True):
-        
+
         self.__origin = Point(0,0)
         self.width = width
         self.height = height
@@ -58,17 +58,17 @@ class Box:
         self.__origin = new_origin
 
     def add_child(self, child):
-        
+
         self.children.append(child)
         child.parent = self
 
     def add_connection(self, connection):
-        
+
         self.connections.append(connection)
         connection.parent = self
 
     def add_style_element(self, style_element):
-        
+
         self.style.append(style_element)
 
     def draw(self, canvas, level=0):
@@ -80,14 +80,14 @@ class Box:
             connection.draw(canvas, level+1)
 
     def stretch(self, delta=1):
-        
+
         if not self.children:
             return
 
         min_x = min(map(lambda c: c.origin.x, self.children))
         min_y = min(map(lambda c: c.origin.y, self.children))
         max_x = max(map(lambda c: c.e.x, self.children))
-        max_y = max(map(lambda c: c.n.y, self.children))        
+        max_y = max(map(lambda c: c.n.y, self.children))
 
         self.width  = (max_x + delta) - (min_x - delta)
         self.height = (max_y + delta) - (min_y - delta)
@@ -102,7 +102,7 @@ class Box:
             connection.origin = connection.origin + (delta_x, delta_y)
 
     def resize(self, width, height):
-        
+
         delta_x = (width - self.width)/2
         delta_y = (height - self.height)/2
 
@@ -145,7 +145,7 @@ class Box:
 
     @property
     def w(self):
-        return self.origin + (0, self.height/2) 
+        return self.origin + (0, self.height/2)
 
     @property
     def nw(self):
@@ -201,7 +201,7 @@ class Box:
             return parent_origin + relative_location
 
     def _draw(self, canvas, level=0):
-        
+
         if not self.border:
             return
         p = path.rect(0, 0, 1, 1)
@@ -215,21 +215,21 @@ class Line(Box):
     """ A Line object represents a single line of text """
 
     def __init__(self, string, size=text.size.normalsize, **kwargs):
-        
+
         super().__init__(**kwargs)
         self.string = string
         self.size = size
         self.initialize()
 
     def initialize(self):
-        
+
         t = text.text(0, 0, self.string, [text.halign.left, text.valign.bottom, self.size])
         bb = t.bbox()
         self.width = 100*bb.width().t
         self.height = 100*bb.height().t
 
     def _draw(self, canvas, level=0):
-        
+
         po = self.get('sw', level)
         x, y = po.x, po.y
         t = text.text(x, y, self.string, [text.halign.left, text.valign.bottom, self.size])
@@ -246,11 +246,11 @@ class Connection(Box):
         self.parent = None
 
     def xs(self):
-        
+
         return [p.x for p in self.points]
 
     def ys(self):
-        
+
         return [p.y for p in self.points]
 
     @property
@@ -267,7 +267,7 @@ class Connection(Box):
             point.y -= delta_y
     @property
     def w(self):
-        return Point(min(self.xs()), (min(self.ys()) + max(self.ys()))/2) 
+        return Point(min(self.xs()), (min(self.ys()) + max(self.ys()))/2)
 
     @property
     def e(self):
@@ -286,7 +286,7 @@ class Connection(Box):
         p0 = self.points[0]
         if self.parent:
             p0 += self.parent.get('sw', level-1)
-        
+
         params = [path.moveto(p0.x, p0.y)]
 
         for point in self.points[1:]:
