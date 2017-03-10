@@ -9,6 +9,12 @@ class Alignment(Enum):
     middle  =   5
     top     =   6
 
+class Direction(Enum):
+    left    =   1
+    right   =   2
+    up      =   3
+    down    =   4
+
 def left_to_right(alignment, delta, anchor_box, *boxes):
 
     if not boxes:
@@ -81,18 +87,6 @@ def top_to_bottom(alignment, delta, anchor_box, *boxes):
         raise(RuntimeError('Invalid Alignment: {}'.format(alignment)))
 
     top_to_bottom(alignment, delta, boxes[0], *(boxes[1:]))
-
-def same_width(*boxes):
-
-    width = max(box.width for box in boxes)
-    for b in boxes:
-        b.width = width
-
-def same_height(*boxes):
-
-    height = max(box.height for box in boxes)
-    for b in boxes:
-        b.height = height
 
 def partition_segment(start, stop, fraction):
 

@@ -36,6 +36,11 @@ class Point:
         elif isinstance(other, tuple):
             return Point(self.x - other[0], self.y - other[1])
 
+    def draw(self, canvas):
+
+        p = path.circle(self.x, self.y, 0.1)
+        canvas.stroke(p, [deco.filled([color.rgb.black])])
+
 class Box:
 
     def __init__(self, width=1, height=1, border=True):
@@ -62,12 +67,7 @@ class Box:
         self.children.append(child)
         child.parent = self
 
-    def add_connection(self, connection):
-
-        self.connections.append(connection)
-        connection.parent = self
-
-    def add_style_element(self, style_element):
+    def add_style(self, style_element):
 
         self.style.append(style_element)
 
@@ -97,9 +97,6 @@ class Box:
 
         for child in self.children:
             child.origin = child.origin + (delta_x, delta_y)
-
-        for connection in self.connections:
-            connection.origin = connection.origin + (delta_x, delta_y)
 
     def resize(self, width, height):
 
