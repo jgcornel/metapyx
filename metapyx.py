@@ -543,7 +543,7 @@ class Text(Box):
         golden = (1 + 5**0.5) / 2
 
         for line in self.strings:
-            self.dict_[line.string] = line
+            self.dict_[line.py_string] = line
             self.add_child(line)
 
         height = max(child.height for child in self.children)
