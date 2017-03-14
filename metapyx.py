@@ -10,6 +10,13 @@ class Align(Enum):
     middle  =   5
     top     =   6
 
+class Direct(num)
+
+    up      =   1
+    down    =   2
+    left    =   3
+    right   =   4
+
 class Point:
 
     __slots__ = ['x', 'y']
@@ -275,15 +282,29 @@ class Ellipse(Box):
 
 class String(Box):
 
-    """ A Line object represents a single line of text """
+    def __init__(self, py_string, direction=Direct.right):
 
-    def __init__(self, string, size=text.size.normalsize, **kwargs):
-
-        super().__init__(**kwargs)
-        self.string = string
-        self.size = size
-        self.styles = [text.halign.left, text.valign.bottom, self.size]
+        super().__init__()
+        self.py_string = py_string
+        self.direction = direction
         self.initialize()
+
+    def initialize(self):
+
+        t = text.text(0, 0, self.py_string, self.styles)
+        bb = t.bbox()
+
+        if self.direction == Direct.left or\
+           self.direction == Direct.right:
+
+               self.width = 100*bb.width().t
+               self.height = 100*bb.height().t
+
+        elif self.direction == Direct.up or\
+             self.direction == Direct.down:
+
+               self.height = 100*bb.width().t
+               self.width  = 100*bb.height().t
 
     @property
     def aspect(self):
@@ -292,24 +313,84 @@ class String(Box):
     @aspect.setter
     def aspect(self, value):
         self.styles.append(value)
-        t = text.text(0, 0, self.string, self.styles)
-        bb = t.bbox()
-        self.width = 100*bb.width().t
-        self.height = 100*bb.height().t
+        self.initialize()
 
-    def initialize(self):
+    def tilt_right(self):
 
-        t = text.text(0, 0, self.string, self.styles)
-        bb = t.bbox()
-        self.width = 100*bb.width().t
-        self.height = 100*bb.height().t
+        super().tilt_right()
+
+        if self.direction == Direct.up:
+            self.direction = Direct.right
+        elif self.direction == Direct.down:
+            self.direction = Direct.left
+        elif self.direction == Direct.left:
+            self.direction = Direct.up
+        elif self.direction == Direct.right:
+            self.direction = Direct.down
+
+    def tilt_left(self):
+
+        super().tilt_left()
+
+        if self.direction == Direct.up:
+            self.direction = Direct.left
+        elif self.direction == Direct.down:
+            self.direction = Direct.right
+        elif self.direction == Direct.left:
+            self.direction = Direct.down
+        elif self.direction == Direct.right:
+            self.direction = Direct.up        
+
+    def tilt_down(self):
+
+        super().tilt_down()
+
+        if self.direction == Direct.up:
+            self.direction = Direct.down
+        elif self.direction == Direct.down:
+            self.direction = Direct.up
+        elif self.direction == Direct.left:
+            self.direction = Direct.right
+        elif self.direction == Direct.right:
+            self.direction = Direct.left
+
+    def flip_horizontal(self):
+
+        raise NotImplementedError("MetaPyx: String.flip_horizontal")
+
+    def flip_vertical(self):
+
+        raise NotImplementedError("MetaPyx: String.flip_vertical")
 
     def _draw(self, canvas, level=0):
 
-        po = self.get('sw', level)
-        x, y = po.x, po.y
-        t = text.text(x, y, self.string, self.styles)
-        canvas.insert(t)
+        if self.direction == Direct.up:
+            """ from se to ne """
+            se = self.get('se', level)
+            ne = self.get('ne', level)
+            p = path.path(path.moveto(se.x, se.y), path.lineto(ne.x, ne.y))
+            canvas.draw(p, [deco.curvedtext(self.py_string, textattrs=self.styles)])
+
+        elif self.direction == Direct.down:
+            """ from nw to sw """
+            nw = self.get('nw', level)
+            sw = self.get('sw', level)
+            p = path.path(path.moveto(nw.x, nw.y), path.lineto(sw.x, sw.y))
+            canvas.draw(p, [deco.curvedtext(self.py_string, textattrs=self.styles)])
+
+        elif self.direction == Direct.left:
+            """ from ne to nw """
+            ne = self.get('ne', level)
+            nw = self.get('nw', level)
+            p = path.path(path.moveto(ne.x, ne.y), path.lineto(nw.x, nw.y))
+            canvas.draw(p, [deco.curvedtext(self.py_string, textattrs=self.styles)])
+
+        elif self.direction == Direct.right:
+            """ from sw to se """
+            sw = self.get('sw', level)
+            se = self.get('se', level)
+            p = path.path(path.moveto(sw.x, sw.y), path.lineto(se.x, se.y))
+            canvas.draw(p, [deco.curvedtext(self.py_string, textattrs=self.styles)])
 
 class Line(Box):
 
