@@ -1,5 +1,14 @@
 import math
+from enum import Enum
 from pyx import *
+
+class Align(Enum):
+    left    =   1
+    right   =   2
+    center  =   3
+    bottom  =   4
+    middle  =   5
+    top     =   6
 
 class Point:
 
@@ -43,16 +52,14 @@ class Point:
 
 class Box:
 
-    def __init__(self, width=1, height=1, border=True):
+    def __init__(self, width=1, height=1):
 
         self.__origin = Point(0,0)
         self.width = width
         self.height = height
-        self.border = border
         self.parent = None
-        self.style = []
+        self.styles = []
         self.children = []
-        self.connections = []
 
     @property
     def origin(self):
@@ -62,55 +69,13 @@ class Box:
     def origin(self, new_origin):
         self.__origin = new_origin
 
-    def add_child(self, child):
+    @property
+    def aspect(self):
+        return self.styles
 
-        self.children.append(child)
-        child.parent = self
-
-    def add_style(self, style_element):
-
-        self.style.append(style_element)
-
-    def draw(self, canvas, level=0):
-
-        self._draw(canvas, level)
-        for child in self.children:
-            child.draw(canvas, level+1)
-        for connection in self.connections:
-            connection.draw(canvas, level+1)
-
-    def stretch(self, delta=1):
-
-        if not self.children:
-            return
-
-        min_x = min(map(lambda c: c.origin.x, self.children))
-        min_y = min(map(lambda c: c.origin.y, self.children))
-        max_x = max(map(lambda c: c.e.x, self.children))
-        max_y = max(map(lambda c: c.n.y, self.children))
-
-        self.width  = (max_x + delta) - (min_x - delta)
-        self.height = (max_y + delta) - (min_y - delta)
-
-        delta_x = delta - min_x
-        delta_y = delta - min_y
-
-        for child in self.children:
-            child.origin = child.origin + (delta_x, delta_y)
-
-    def resize(self, width, height):
-
-        delta_x = (width - self.width)/2
-        delta_y = (height - self.height)/2
-
-        self.width = width
-        self.height = height
-
-        for child in self.children:
-            child.origin = child.origin + (delta_x, delta_y)
-
-        for connection in self.connections:
-            connection.origin = connection.origin + (delta_x, delta_y)
+    @aspect.setter
+    def aspect(self, value):
+        self.styles.append(value)
 
     @property
     def c(self):
@@ -184,6 +149,88 @@ class Box:
     def nw(self, nw):
         self.origin = nw - (0, self.height)
 
+    def add_child(self, child):
+        self.children.append(child)
+        child.parent = self
+
+    def draw(self, canvas, level=0):
+
+        self._draw(canvas, level)
+        for child in self.children:
+            child.draw(canvas, level+1)
+
+    def stretch(self, delta=1):
+
+        if not self.children:
+            return
+
+        min_x = min(map(lambda c: c.origin.x, self.children))
+        min_y = min(map(lambda c: c.origin.y, self.children))
+        max_x = max(map(lambda c: c.e.x, self.children))
+        max_y = max(map(lambda c: c.n.y, self.children))
+
+        self.width  = (max_x + delta) - (min_x - delta)
+        self.height = (max_y + delta) - (min_y - delta)
+
+        delta_x = delta - min_x
+        delta_y = delta - min_y
+
+        for child in self.children:
+            child.origin = child.origin + (delta_x, delta_y)
+
+    def tilt_right(self):
+
+        for child in self.children:
+            child.tilt_right()
+
+        if self.parent:
+            x, y = self.origin.x, self.origin.y
+            W = self.parent.width
+            w = self.width
+            self.origin.x, self.origin.y = y, W - (x + w)
+
+        self.width, self.height = self.height, self.width
+
+    def tilt_left(self):
+
+        for child in self.children:
+            child.tilt_left()
+
+        if self.parent:
+            x, y = self.origin.x, self.origin.y
+            H = self.parent.height
+            h = self.height
+            self.origin.x, self.origin.y = H - (y + h), x
+
+        self.width, self.height = self.height, self.width
+
+    def tilt_down(self):
+
+        self.tilt_right()
+        self.tilt_right()
+
+    def flip_horizontal(self):
+
+        for child in self.children:
+            child.flip_horizontal()
+
+        if self.parent:
+            x, y = self.origin.x, self.origin.y
+            W = self.parent.width
+            w = self.width
+            self.origin.x, self.origin.y = W - (x + w), y
+
+    def flip_vertical(self):
+
+        for child in self.children:
+            child.flip_vertical()
+
+        if self.parent:
+            x, y = self.origin.x, self.origin.y
+            H = self.parent.height
+            h = self.height
+            self.origin.x, self.origin.y = x, H - (y + h)        
+
     def get(self, location, level=0):
 
         """ An AttributeError may be raised """
@@ -199,15 +246,34 @@ class Box:
 
     def _draw(self, canvas, level=0):
 
-        if not self.border:
-            return
+        """ placeholder only """
+        pass
+
+class Rectangle(Box):
+
+    def _draw(self, canvas, level=0):
+
         p = path.rect(0, 0, 1, 1)
         sw = self.get('sw', level)
-        self.style.append(trafo.scale(sx=self.width, sy=self.height))
-        self.style.append(trafo.translate(sw.x, sw.y))
-        canvas.stroke(p, self.style)
+        self.styles.append(trafo.scale(sx=self.width, sy=self.height))
+        self.styles.append(trafo.translate(sw.x, sw.y))
+        canvas.stroke(p, self.styles)
 
-class Line(Box):
+class Ellipse(Box):
+
+    def _draw(self, canvas, level=0):
+
+        if not self.border:
+            return
+
+        sw = self.get('sw', level)
+        p = path.circle(0, 0, 0.5) # radius is required
+        self.styles.append(trafo.scale(sx=self.width, sy=self.height))
+        self.styles.append(trafo.translate(sw.x + self.width/2,
+                                           sw.y + self.height/2))
+        canvas.stroke(p, self.styles)
+
+class String(Box):
 
     """ A Line object represents a single line of text """
 
@@ -216,11 +282,24 @@ class Line(Box):
         super().__init__(**kwargs)
         self.string = string
         self.size = size
+        self.styles = [text.halign.left, text.valign.bottom, self.size]
         self.initialize()
+
+    @property
+    def aspect(self):
+        return self.styles
+
+    @aspect.setter
+    def aspect(self, value):
+        self.styles.append(value)
+        t = text.text(0, 0, self.string, self.styles)
+        bb = t.bbox()
+        self.width = 100*bb.width().t
+        self.height = 100*bb.height().t
 
     def initialize(self):
 
-        t = text.text(0, 0, self.string, [text.halign.left, text.valign.bottom, self.size])
+        t = text.text(0, 0, self.string, self.styles)
         bb = t.bbox()
         self.width = 100*bb.width().t
         self.height = 100*bb.height().t
@@ -229,17 +308,16 @@ class Line(Box):
 
         po = self.get('sw', level)
         x, y = po.x, po.y
-        t = text.text(x, y, self.string, [text.halign.left, text.valign.bottom, self.size])
+        t = text.text(x, y, self.string, self.styles)
         canvas.insert(t)
 
-class Connection(Box):
+class Line(Box):
 
-    def __init__(self, points=[], style=None):
+    def __init__(self, points=[]):
 
         super().__init__()
 
         self.points = points if points else []
-        self.style  = style  if style  else []
         self.parent = None
 
     def xs(self):
@@ -293,4 +371,124 @@ class Connection(Box):
             params.append(path.lineto(pi.x, pi.y))
 
         p = path.path(*params)
-        canvas.stroke(p, self.style)
+        canvas.stroke(p, self.styles)
+
+def left_to_right(alignment, delta, anchor_box, *boxes):
+
+    if not boxes:
+        return
+
+    box = boxes[0]
+
+    if alignment is Align.bottom:
+        box.sw = anchor_box.se + (delta, 0)
+    elif alignment is Align.middle:
+        box.w  = anchor_box.e  + (delta, 0)
+    elif alignment is Align.top:
+        box.nw = anchor_box.ne + (delta, 0)
+    else:
+        raise(RuntimeError('Invalid Align: {}'.format(alignment)))
+
+    left_to_right(alignment, delta, boxes[0], *(boxes[1:]))
+
+def right_to_left(alignment, delta, anchor_box, *boxes):
+
+    if not boxes:
+        return
+
+    box = boxes[0]
+
+    if alignment is Align.bottom:
+        box.se = anchor_box.sw - (delta, 0)
+    elif alignment is Align.middle:
+        box.e  = anchor_box.w  - (delta, 0)
+    elif alignment is Align.top:
+        box.ne = anchor_box.nw - (delta, 0)
+    else:
+        raise(RuntimeError('Invalid Align: {}'.format(alignment)))
+
+    right_to_left(alignment, delta, boxes[0], *(boxes[1:]))
+
+def bottom_to_top(alignment, delta, anchor_box, *boxes):
+
+    if not boxes:
+        return
+
+    box = boxes[0]
+
+    if alignment is Align.left:
+        box.sw = anchor_box.nw + (0, delta)
+    elif alignment is Align.center:
+        box.s  = anchor_box.n  + (0, delta)
+    elif alignment is Align.right:
+        box.se = anchor_box.ne + (0, delta)
+    else:
+        raise(RuntimeError('Invalid Align: {}'.format(alignment)))
+
+    bottom_to_top(alignment, delta, boxes[0], *(boxes[1:]))
+
+
+def top_to_bottom(alignment, delta, anchor_box, *boxes):
+
+    if not boxes:
+        return
+
+    box = boxes[0]
+
+    if alignment is Align.left:
+        box.nw = anchor_box.sw - (0, delta)
+    elif alignment is Align.center:
+        box.n  = anchor_box.s  - (0, delta)
+    elif alignment is Align.right:
+        box.ne = anchor_box.se - (0, delta)
+    else:
+        raise(RuntimeError('Invalid Align: {}'.format(alignment)))
+
+    top_to_bottom(alignment, delta, boxes[0], *(boxes[1:]))
+
+def partition_segment(start, stop, fraction):
+
+    point = Point(0, 0)
+
+    point.x = start.x + fraction * (stop.x - start.x)
+    point.y = start.y + fraction * (stop.y - start.y)
+
+    return point
+
+
+
+class Text(Box):
+
+    """ A Text object is a collection of strings """
+
+    def __init__(self,
+                 strings=[],
+                 border=None,
+                 alignment=Align.center):
+
+        super().__init__(border)
+        self.strings = strings if strings else []
+        self.alignment = alignment
+
+        self.dict_ = {}
+
+        self.initialize()
+
+    def initialize(self):
+
+        golden = (1 + 5**0.5) / 2
+
+        for line in self.strings:
+            self.dict_[line.string] = line
+            self.add_child(line)
+
+        height = max(child.height for child in self.children)
+        delta  = 0.66*(golden - 1) * height
+
+        top_to_bottom(self.alignment, delta, self.children[0],
+                *self.children[1:])
+
+        self.stretch(delta)
+
+    def __getitem__(self, key):
+        return self.dict_[key]
