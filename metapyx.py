@@ -10,12 +10,13 @@ class Align(Enum):
     middle  =   5
     top     =   6
 
-class Direct(num)
+class Direct(Enum):
 
-    up      =   1
+    """ subsequent computations depend on this order and these values """
+    up      =   0
+    right   =   1
     down    =   2
     left    =   3
-    right   =   4
 
 class Point:
 
@@ -319,40 +320,22 @@ class String(Box):
 
         super().tilt_right()
 
-        if self.direction == Direct.up:
-            self.direction = Direct.right
-        elif self.direction == Direct.down:
-            self.direction = Direct.left
-        elif self.direction == Direct.left:
-            self.direction = Direct.up
-        elif self.direction == Direct.right:
-            self.direction = Direct.down
+        i = self.direction.value
+        self.direction = Direct((i+1)%4)
 
     def tilt_left(self):
 
         super().tilt_left()
 
-        if self.direction == Direct.up:
-            self.direction = Direct.left
-        elif self.direction == Direct.down:
-            self.direction = Direct.right
-        elif self.direction == Direct.left:
-            self.direction = Direct.down
-        elif self.direction == Direct.right:
-            self.direction = Direct.up        
+        i = self.direction.value
+        self.direction = Direct((i+3)%4)
 
     def tilt_down(self):
 
         super().tilt_down()
 
-        if self.direction == Direct.up:
-            self.direction = Direct.down
-        elif self.direction == Direct.down:
-            self.direction = Direct.up
-        elif self.direction == Direct.left:
-            self.direction = Direct.right
-        elif self.direction == Direct.right:
-            self.direction = Direct.left
+        i = self.direction.value
+        self.direction = Direct((i+2)%4)
 
     def flip_horizontal(self):
 
