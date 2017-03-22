@@ -1,6 +1,30 @@
-import math
+from math import pi, cos, sin
 from enum import Enum
 from pyx import *
+
+TEXT_SIZES = [text.size.tiny, 
+              text.size.scriptsize, 
+              text.size.footnotesize,
+              text.size.small,
+              text.size.normalsize,
+              text.size.large,
+              text.size.Large,
+              text.size.LARGE,
+              text.size.huge,
+              text.size.Huge,
+             ]
+
+TEXT_RATIOS = [0.5,
+               0.7,
+               0.8,
+               0.9,
+               1.0,
+               1.2,
+               1.44,
+               1.728,
+               2.074,
+               2.488,
+               ]
 
 class Align(Enum):
     left    =   1
@@ -10,14 +34,6 @@ class Align(Enum):
     middle  =   5
     top     =   6
 
-class Direct(Enum):
-
-    """ subsequent computations depend on this order and these values """
-    up      =   0
-    right   =   1
-    down    =   2
-    left    =   3
-
 class Point:
 
     __slots__ = ['x', 'y']
@@ -26,6 +42,13 @@ class Point:
 
         self.x = x
         self.y = y
+
+    def __getitem__(self, i):
+
+        if i < 0 or i > 1:
+            raise IndexError("Point index out of range")
+
+        return self.y if i else self.x
 
     def __eq__(self, other):
 
@@ -55,119 +78,219 @@ class Point:
 
     def draw(self, canvas):
 
-        p = path.circle(self.x, self.y, 0.1)
+        p = path.circle(self.x, self.y, 0.04)
         canvas.stroke(p, [deco.filled([color.rgb.black])])
 
 class Box:
 
-    def __init__(self, width=1, height=1):
+    def __init__(self, debug=False):
 
-        self.__origin = Point(0,0)
-        self.width = width
-        self.height = height
+        self.debug = debug
         self.parent = None
-        self.styles = []
+        self.points = [Point(0,0)]
         self.children = []
+        self.decoration = []
 
     @property
     def origin(self):
-        return self.__origin
+        return self.points[0]
 
     @origin.setter
     def origin(self, new_origin):
-        self.__origin = new_origin
+        dx, dy = new_origin - self.points[0]
+        self.translate(dx, dy)
+
+    def __min_x(self):
+        return min(p.x for p in self.points)
+
+    def __max_x(self):
+        return max(p.x for p in self.points)
+
+    def __half_x(self):
+        return 0.5 * (self.__max_x() + self.__min_x())
+
+    def __half_y(self):
+        return 0.5 * (self.__max_y() + self.__min_y())
+
+    def __min_y(self):
+        return min(p.y for p in self.points)
+
+    def __max_y(self):
+        return max(p.y for p in self.points)
+
+    def translate(self, dx, dy):
+
+        for child in self.children:
+            child.translate(dx, dy)
+
+        for point in self.points:
+            point.x += dx
+            point.y += dy
 
     @property
-    def aspect(self):
-        return self.styles
+    def width(self):
+        return self.__max_x() - self.__min_x()
 
-    @aspect.setter
-    def aspect(self, value):
-        self.styles.append(value)
+    @property
+    def height(self):
+        return self.__max_y() - self.__min_y()
 
     @property
     def c(self):
-        return self.origin + (self.width/2, self.height/2)
+        return Point(self.__half_x(), self.__half_y())
 
     @property
     def n(self):
-        return self.origin + (self.width/2, self.height)
+        return Point(self.__half_x(), self.__max_y())
 
     @property
     def ne(self):
-        return self.origin + (self.width, self.height)
+        return Point(self.__max_x(), self.__max_y())
 
     @property
     def e(self):
-        return self.origin + (self.width, self.height/2)
+        return Point(self.__max_x(), self.__half_y())
 
     @property
     def se(self):
-        return self.origin + (self.width, 0)
+        return Point(self.__max_x(), self.__min_y())
 
     @property
     def s(self):
-        return self.origin + (self.width/2, 0)
+        return Point(self.__half_x(), self.__min_y())
 
     @property
     def sw(self):
-        return self.origin
+        return Point(self.__min_x(), self.__min_y())
 
     @property
     def w(self):
-        return self.origin + (0, self.height/2)
+        return Point(self.__min_x(), self.__half_y())
 
     @property
     def nw(self):
-        return self.origin + (0, self.height)
+        return Point(self.__min_x(), self.__max_y())
 
     @c.setter
     def c(self, c):
-        self.origin = c - (self.width/2, self.height/2)
+        dx, dy = c - self.c
+        self.translate(dx, dy)
 
     @n.setter
     def n(self, n):
-        self.origin = n - (self.width/2, self.height)
+        dx, dy = n - self.n
+        self.translate(dx, dy)
 
     @ne.setter
     def ne(self, ne):
-        self.origin = ne - (self.width, self.height)
+        dx, dy = ne - self.ne
+        self.translate(dx, dy)
 
     @e.setter
     def e(self, e):
-        self.origin = e - (self.width, self.height/2)
+        dx, dy = e - self.e
+        self.translate(dx, dy)
 
     @se.setter
     def se(self, se):
-        self.origin = se - (self.width, 0)
+        dx, dy = se - self.se
+        self.translate(dx, dy)
 
     @s.setter
     def s(self, s):
-        self.origin = s - (self.width/2, 0)
+        dx, dy = s - self.s
+        self.translate(dx, dy)
 
     @sw.setter
     def sw(self, sw):
-        self.origin = sw
+        dx, dy = sw - self.sw
+        self.translate(dx, dy)
 
     @w.setter
     def w(self, w):
-        self.origin = w - (0, self.height/2)
+        dx, dy = w - self.w
+        self.translate(dx, dy)
 
     @nw.setter
     def nw(self, nw):
-        self.origin = nw - (0, self.height)
+        dx, dy = nw - self.nw
+        self.translate(dx, dy)
+
+    def decorate(self, element):
+        self.decoration.append(element)
 
     def add_child(self, child):
         self.children.append(child)
         child.parent = self
 
-    def draw(self, canvas, level=0):
+    def draw(self, canvas):
 
-        self._draw(canvas, level)
+        self._draw(canvas)
         for child in self.children:
-            child.draw(canvas, level+1)
+            child.draw(canvas)
 
-    def stretch(self, delta=1):
+    def scale(self, factor):
+
+        for child in self.children:
+            child.scale(factor)
+
+        for p in self.points:
+            p.x *= factor
+            p.y *= factor
+
+    def rotate(self, degrees):
+
+        for child in self.children:
+            child.rotate(degrees)
+
+        radians = degrees * pi / 180
+        cos_a = cos(radians)
+        sin_a = sin(radians)
+
+        for p in self.points:
+            # p is like a C++ reference !!
+            x, y = p.x, p.y
+            p.x = x*cos_a - y*sin_a 
+            p.y = x*sin_a + y*cos_a
+
+    def translate(self, dx, dy):
+
+        for child in self.children:
+            child.translate(dx, dy)
+
+        for p in self.points:
+            # p is like a C++ reference !!
+            p.x += dx
+            p.y += dy
+
+    def flip(self, direct):
+
+        raise NotImplementedError("MetaPyx: Box.flip")
+
+    def _draw(self, canvas):
+
+        if self.debug:
+            p = path.rect(0, 0, 1, 1)
+            priv_decoration = []
+            priv_decoration.append(trafo.scale(sx=self.width, sy=self.height))
+            priv_decoration.append(trafo.translate(self.__min_x(), self.__min_y()))
+            priv_decoration.append(style.linestyle.dashed)
+            canvas.stroke(p, priv_decoration)
+            self.points[0].draw(canvas)
+
+        """ Derived classes must specify the remainder """
+
+
+class Rectangle(Box):
+
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+        self.points.append(Point(0, 1))
+        self.points.append(Point(1, 1))
+        self.points.append(Point(1, 0))
+
+    def stretch(self, delta=0):
 
         if not self.children:
             return
@@ -177,267 +300,217 @@ class Box:
         max_x = max(map(lambda c: c.e.x, self.children))
         max_y = max(map(lambda c: c.n.y, self.children))
 
-        self.width  = (max_x + delta) - (min_x - delta)
-        self.height = (max_y + delta) - (min_y - delta)
+        self.points[0] = Point(min_x-delta, min_y-delta)
+        self.points[1] = Point(min_x-delta, max_y+delta)
+        self.points[2] = Point(max_x+delta, max_y+delta)
+        self.points[3] = Point(max_x+delta, min_y-delta)
 
-        delta_x = delta - min_x
-        delta_y = delta - min_y
+    def _draw(self, canvas):
 
-        for child in self.children:
-            child.origin = child.origin + (delta_x, delta_y)
+        super()._draw(canvas)
 
-    def tilt_right(self):
+        x, y = self.points[0].x, self.points[0].y
+        p = path.path(path.moveto(x, y))
+        for point in self.points[1:]:
+            p.append(path.lineto(point.x, point.y))
+        p.append(path.lineto(x, y))
 
-        for child in self.children:
-            child.tilt_right()
+        canvas.stroke(p, self.decoration)
 
-        if self.parent:
-            x, y = self.origin.x, self.origin.y
-            W = self.parent.width
-            w = self.width
-            self.origin.x, self.origin.y = y, W - (x + w)
 
-        self.width, self.height = self.height, self.width
+class Triangle(Box):
 
-    def tilt_left(self):
+    def __init__(self, *args, **kwargs):
 
-        for child in self.children:
-            child.tilt_left()
+        super().__init__(*args, **kwargs)
+        self.points.append(Point(0.5, 1))
+        self.points.append(Point(1, 0))
 
-        if self.parent:
-            x, y = self.origin.x, self.origin.y
-            H = self.parent.height
-            h = self.height
-            self.origin.x, self.origin.y = H - (y + h), x
+    def _draw(self, canvas):
 
-        self.width, self.height = self.height, self.width
+        super()._draw(canvas)
 
-    def tilt_down(self):
+        x, y = self.points[0].x, self.points[0].y
+        p = path.path(path.moveto(x, y))
+        for point in self.points[1:]:
+            point.draw(canvas)
+            p.append(path.lineto(point.x, point.y))
+        p.append(path.lineto(x, y))
 
-        self.tilt_right()
-        self.tilt_right()
+        canvas.stroke(p, self.decoration)
 
-    def flip_horizontal(self):
+class Circle(Box):
 
-        for child in self.children:
-            child.flip_horizontal()
+    def __init__(self, *args, **kwargs):
 
-        if self.parent:
-            x, y = self.origin.x, self.origin.y
-            W = self.parent.width
-            w = self.width
-            self.origin.x, self.origin.y = W - (x + w), y
+        super().__init__(*args, **kwargs)
+        self.radius = 1
+        self.points.append(Point(0, 1))
+        self.points.append(Point(1, 1))
+        self.points.append(Point(1, 0))
 
-    def flip_vertical(self):
+    def rotate(self, degrees):
 
-        for child in self.children:
-            child.flip_vertical()
+        return
 
-        if self.parent:
-            x, y = self.origin.x, self.origin.y
-            H = self.parent.height
-            h = self.height
-            self.origin.x, self.origin.y = x, H - (y + h)        
+    def _draw(self, canvas):
 
-    def get(self, location, level=0):
+        super()._draw(canvas)
 
-        """ An AttributeError may be raised """
-        relative_location = self.__getattribute__(location)
-
-        if level < 0:
-            return Point(0, 0)
-        elif level == 0:
-            return relative_location
-        else:
-            parent_origin = self.parent.get('origin', level-1)
-            return parent_origin + relative_location
-
-    def _draw(self, canvas, level=0):
-
-        """ placeholder only """
-        pass
-
-class Rectangle(Box):
-
-    def _draw(self, canvas, level=0):
-
-        p = path.rect(0, 0, 1, 1)
-        sw = self.get('sw', level)
-        self.styles.append(trafo.scale(sx=self.width, sy=self.height))
-        self.styles.append(trafo.translate(sw.x, sw.y))
-        canvas.stroke(p, self.styles)
-
-class Ellipse(Box):
-
-    def _draw(self, canvas, level=0):
-
-        if not self.border:
-            return
-
-        sw = self.get('sw', level)
         p = path.circle(0, 0, 0.5) # radius is required
-        self.styles.append(trafo.scale(sx=self.width, sy=self.height))
-        self.styles.append(trafo.translate(sw.x + self.width/2,
-                                           sw.y + self.height/2))
-        canvas.stroke(p, self.styles)
+        x1, y1 = self.origin + (self.width/2, self.height/2)
+        self.decoration.append(trafo.scale(sx=self.width, sy=self.height))
+        self.decoration.append(trafo.translate(x1, y1))
+        canvas.stroke(p, self.decoration)
 
 class String(Box):
 
-    def __init__(self, py_string, direction=Direct.right):
+    def __init__(self, py_string, size=text.size.normal, **kwargs):
 
-        super().__init__()
+        super().__init__(**kwargs)
         self.py_string = py_string
-        self.direction = direction
+        self.decoration.append(size)
+        self.decoration.append(text.valign.baseline)
         self.initialize()
 
     def initialize(self):
 
-        t = text.text(0, 0, self.py_string, self.styles)
+        t = text.text(0, 0, self.py_string, self.decoration)
         bb = t.bbox()
 
-        if self.direction == Direct.left or\
-           self.direction == Direct.right:
+        min_x, min_y = 0, 0
+        max_x, max_y = 100*bb.width().t, 100*bb.height().t
 
-               self.width = 100*bb.width().t
-               self.height = 100*bb.height().t
+        """
+        print("dimensions for", self.py_string, ":")
+        print("     {:8.3f} {:8.3f}".format(min_x, min_y))
+        print("     {:8.3f} {:8.3f}".format(max_x, max_y))
+        """
 
-        elif self.direction == Direct.up or\
-             self.direction == Direct.down:
+        self.points.append(Point(min_x, max_y))
+        self.points.append(Point(max_x, max_y))
+        self.points.append(Point(max_x, min_y))
 
-               self.height = 100*bb.width().t
-               self.width  = 100*bb.height().t
+    def decorate(self, element):
 
-    @property
-    def aspect(self):
-        return self.styles
-
-    @aspect.setter
-    def aspect(self, value):
-        self.styles.append(value)
+        super().decorate(element)
         self.initialize()
 
-    def tilt_right(self):
+    def flip(self, direct):
 
-        super().tilt_right()
+        raise NotImplementedError("MetaPyx: String.flip")
 
-        i = self.direction.value
-        self.direction = Direct((i+1)%4)
+    def _draw(self, canvas):
 
-    def tilt_left(self):
+        super()._draw(canvas)
 
-        super().tilt_left()
+        x1, y1 = self.points[0]
+        x2, y2 = self.points[3]
+        p = path.path(path.moveto(x1, y1), path.lineto(x2, y2))
+        canvas.draw(p, [deco.curvedtext(self.py_string, textattrs=self.decoration)])
 
-        i = self.direction.value
-        self.direction = Direct((i+3)%4)
+class Text(Rectangle):
 
-    def tilt_down(self):
+    def __init__(self,
+                 *py_strings,
+                 size=text.size.normal,
+                 alignment=Align.center,
+                 **kwargs):
 
-        super().tilt_down()
+        super().__init__(**kwargs)
+        self.py_strings = py_strings if py_strings else []
+        self.alignment = alignment
+        self.size = size
 
-        i = self.direction.value
-        self.direction = Direct((i+2)%4)
+        self.dict_ = {}
 
-    def flip_horizontal(self):
+        self.initialize()
 
-        raise NotImplementedError("MetaPyx: String.flip_horizontal")
+    def decorate(self):
 
-    def flip_vertical(self):
+        raise NotImplementedError("MetaPyx: Text.decorate")
 
-        raise NotImplementedError("MetaPyx: String.flip_vertical")
+    def _size_index(self):
 
-    def _draw(self, canvas, level=0):
+        for i, sz in enumerate(TEXT_SIZES):
+            if self.size == sz:
+                return i
 
-        if self.direction == Direct.up:
-            """ from se to ne """
-            se = self.get('se', level)
-            ne = self.get('ne', level)
-            p = path.path(path.moveto(se.x, se.y), path.lineto(ne.x, ne.y))
-            canvas.draw(p, [deco.curvedtext(self.py_string, textattrs=self.styles)])
+    def scale(self, factor):
 
-        elif self.direction == Direct.down:
-            """ from nw to sw """
-            nw = self.get('nw', level)
-            sw = self.get('sw', level)
-            p = path.path(path.moveto(nw.x, nw.y), path.lineto(sw.x, sw.y))
-            canvas.draw(p, [deco.curvedtext(self.py_string, textattrs=self.styles)])
+        if factor == 1:
+            return
 
-        elif self.direction == Direct.left:
-            """ from ne to nw """
-            ne = self.get('ne', level)
-            nw = self.get('nw', level)
-            p = path.path(path.moveto(ne.x, ne.y), path.lineto(nw.x, nw.y))
-            canvas.draw(p, [deco.curvedtext(self.py_string, textattrs=self.styles)])
+        new_height = factor * self.height
+        new_width  = factor * self.width
 
-        elif self.direction == Direct.right:
-            """ from sw to se """
-            sw = self.get('sw', level)
-            se = self.get('se', level)
-            p = path.path(path.moveto(sw.x, sw.y), path.lineto(se.x, se.y))
-            canvas.draw(p, [deco.curvedtext(self.py_string, textattrs=self.styles)])
+        super().scale(factor)
 
-class Line(Box):
+        i = self._size_index()
 
-    def __init__(self, points=[]):
+        if factor < 1:
+            sizes = TEXT_SIZES[0:i]
+        elif factor > 1:
+            sizes = TEXT_SIZES[i+1:]
 
-        super().__init__()
+        """ create a list in reverse order of size: the goal is to get to
+        the greatest possible size that fits in the scaled box """
+        sizes.reverse()
 
-        self.points = points if points else []
-        self.parent = None
+        fits = False
 
-    def xs(self):
+        for size in sizes:
 
-        return [p.x for p in self.points]
+            max_width = 0
+            max_height = 0
+            height_sum = 0
 
-    def ys(self):
+            for child in self.children:
+                child_string = String(child.py_string, size=size)
+                max_width = max(max_width, child_string.width)
+                max_height = max(max_height, child_string.height)
+                height_sum += child_string.height
 
-        return [p.y for p in self.points]
+            #print(max_width, "<?", new_width)
+            if max_width < new_width:
+                break
 
-    @property
-    def origin(self):
-        return Point(min(self.xs()), min(self.ys()))
+        self.children = []
+        self.dict_ = {}
+        self.size = size
+        self.initialize()
 
-    @origin.setter
-    def origin(self, new_origin):
+    def initialize(self):
 
-        delta_x = self.origin.x - new_origin.x
-        delta_y = self.origin.y - new_origin.y
-        for point in self.points:
-            point.x -= delta_x
-            point.y -= delta_y
-    @property
-    def w(self):
-        return Point(min(self.xs()), (min(self.ys()) + max(self.ys()))/2)
+        golden = 1.618034
 
-    @property
-    def e(self):
-        return Point(max(self.xs()), (min(self.ys()) + max(self.ys()))/2)
+        for py_string in self.py_strings:
+            string = String(py_string, size=self.size, debug=False)
+            self.dict_[py_string] = string
+            self.add_child(string)
 
-    @property
-    def n(self):
-        return Point((min(self.xs()) + max(self.xs()))/2, max(self.ys()))
+        height = max(child.height for child in self.children)
+        delta = 0.66*(golden - 1) * height
 
-    @property
-    def s(self):
-        return Point((min(self.xs()) + max(self.xs()))/2, min(self.ys()))
+        top_to_bottom(*self.children, alignment=self.alignment, delta=delta)
 
-    def draw(self, canvas, level=0):
+        """
+        print("max width: {:8.3f}".format(max(c.width for c in self.children)))
+        print("height   : {:8.3f}".format(height))
+        print("delta:     {:8.3f}".format(delta))
+        """
+        self.stretch(delta)
 
-        p0 = self.points[0]
-        if self.parent:
-            p0 += self.parent.get('sw', level-1)
+    def __getitem__(self, key):
+        return self.dict_[key]
 
-        params = [path.moveto(p0.x, p0.y)]
+    def not_draw(self, canvas):
 
-        for point in self.points[1:]:
-            pi = point
-            if self.parent:
-                pi += self.parent.get('sw', level-1)
-            params.append(path.lineto(pi.x, pi.y))
+        """ avoid drawing the rectangle """
+        pass
 
-        p = path.path(*params)
-        canvas.stroke(p, self.styles)
 
-def left_to_right(alignment, delta, anchor_box, *boxes):
+def left_to_right(anchor_box, *boxes, alignment=Align.middle, delta=1):
 
     if not boxes:
         return
@@ -453,9 +526,9 @@ def left_to_right(alignment, delta, anchor_box, *boxes):
     else:
         raise(RuntimeError('Invalid Align: {}'.format(alignment)))
 
-    left_to_right(alignment, delta, boxes[0], *(boxes[1:]))
+    left_to_right(boxes[0], *boxes[1:], alignment=alignment, delta=delta)
 
-def right_to_left(alignment, delta, anchor_box, *boxes):
+def right_to_left(anchor_box, *boxes, alignment=Align.middle, delta=1):
 
     if not boxes:
         return
@@ -471,9 +544,9 @@ def right_to_left(alignment, delta, anchor_box, *boxes):
     else:
         raise(RuntimeError('Invalid Align: {}'.format(alignment)))
 
-    right_to_left(alignment, delta, boxes[0], *(boxes[1:]))
+    right_to_left(boxes[0], *boxes[1:], alignment=alignment, delta=delta)
 
-def bottom_to_top(alignment, delta, anchor_box, *boxes):
+def bottom_to_top(anchor_box, *boxes, alignment=Align.center, delta=1):
 
     if not boxes:
         return
@@ -489,10 +562,10 @@ def bottom_to_top(alignment, delta, anchor_box, *boxes):
     else:
         raise(RuntimeError('Invalid Align: {}'.format(alignment)))
 
-    bottom_to_top(alignment, delta, boxes[0], *(boxes[1:]))
+    bottom_to_top(boxes[0], *boxes[1:], alignment=alignment, delta=delta)
 
 
-def top_to_bottom(alignment, delta, anchor_box, *boxes):
+def top_to_bottom(anchor_box, *boxes, alignment=Align.center, delta=1):
 
     if not boxes:
         return
@@ -508,7 +581,7 @@ def top_to_bottom(alignment, delta, anchor_box, *boxes):
     else:
         raise(RuntimeError('Invalid Align: {}'.format(alignment)))
 
-    top_to_bottom(alignment, delta, boxes[0], *(boxes[1:]))
+    top_to_bottom(boxes[0], *boxes[1:], alignment=alignment, delta=delta)
 
 def partition_segment(start, stop, fraction):
 
@@ -518,41 +591,3 @@ def partition_segment(start, stop, fraction):
     point.y = start.y + fraction * (stop.y - start.y)
 
     return point
-
-
-
-class Text(Box):
-
-    """ A Text object is a collection of strings """
-
-    def __init__(self,
-                 strings=[],
-                 border=None,
-                 alignment=Align.center):
-
-        super().__init__(border)
-        self.strings = strings if strings else []
-        self.alignment = alignment
-
-        self.dict_ = {}
-
-        self.initialize()
-
-    def initialize(self):
-
-        golden = (1 + 5**0.5) / 2
-
-        for line in self.strings:
-            self.dict_[line.py_string] = line
-            self.add_child(line)
-
-        height = max(child.height for child in self.children)
-        delta  = 0.66*(golden - 1) * height
-
-        top_to_bottom(self.alignment, delta, self.children[0],
-                *self.children[1:])
-
-        self.stretch(delta)
-
-    def __getitem__(self, key):
-        return self.dict_[key]
