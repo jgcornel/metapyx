@@ -59,6 +59,7 @@ class Point:
         p = path.circle(self.x, self.y, 0.04)
         canvas.stroke(p, [deco.filled([color.rgb.black])])
 
+
 class Box:
 
     def __init__(self, debug=False):
@@ -319,6 +320,7 @@ class Triangle(Box):
 
         canvas.stroke(p, self.decoration)
 
+
 class Circle(Box):
 
     def __init__(self, radius=1, **kwargs):
@@ -489,7 +491,7 @@ class Text(Rectangle):
     def __getitem__(self, key):
         return self.dict_[key]
 
-    def not_draw(self, canvas):
+    def _draw(self, canvas):
 
         """ avoid drawing the rectangle """
         pass
@@ -513,6 +515,7 @@ def left_to_right(anchor_box, *boxes, alignment=Align.middle, delta=1):
 
     left_to_right(boxes[0], *boxes[1:], alignment=alignment, delta=delta)
 
+
 def right_to_left(anchor_box, *boxes, alignment=Align.middle, delta=1):
 
     if not boxes:
@@ -530,6 +533,7 @@ def right_to_left(anchor_box, *boxes, alignment=Align.middle, delta=1):
         raise(RuntimeError('Invalid Align: {}'.format(alignment)))
 
     right_to_left(boxes[0], *boxes[1:], alignment=alignment, delta=delta)
+
 
 def bottom_to_top(anchor_box, *boxes, alignment=Align.center, delta=1):
 
@@ -567,6 +571,7 @@ def top_to_bottom(anchor_box, *boxes, alignment=Align.center, delta=1):
         raise(RuntimeError('Invalid Align: {}'.format(alignment)))
 
     top_to_bottom(boxes[0], *boxes[1:], alignment=alignment, delta=delta)
+
 
 def partition_segment(start, stop, fraction):
 
