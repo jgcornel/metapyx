@@ -1,30 +1,7 @@
+from collections import OrderedDict
 from math import pi, cos, sin
 from enum import Enum
 from pyx import *
-
-TEXT_SIZES = [text.size.tiny, 
-              text.size.scriptsize, 
-              text.size.footnotesize,
-              text.size.small,
-              text.size.normalsize,
-              text.size.large,
-              text.size.Large,
-              text.size.LARGE,
-              text.size.huge,
-              text.size.Huge,
-             ]
-
-TEXT_RATIOS = [0.5,
-               0.7,
-               0.8,
-               0.9,
-               1.0,
-               1.2,
-               1.44,
-               1.728,
-               2.074,
-               2.488,
-               ]
 
 class Align(Enum):
     left    =   1
@@ -33,6 +10,7 @@ class Align(Enum):
     bottom  =   4
     middle  =   5
     top     =   6
+
 
 class Point:
 
@@ -91,15 +69,6 @@ class Box:
         self.children = []
         self.decoration = []
 
-    @property
-    def origin(self):
-        return self.points[0]
-
-    @origin.setter
-    def origin(self, new_origin):
-        dx, dy = new_origin - self.points[0]
-        self.translate(dx, dy)
-
     def __min_x(self):
         return min(p.x for p in self.points)
 
@@ -126,6 +95,15 @@ class Box:
         for point in self.points:
             point.x += dx
             point.y += dy
+
+    @property
+    def origin(self):
+        return self.points[0]
+
+    @origin.setter
+    def origin(self, new_origin):
+        dx, dy = new_origin - self.points[0]
+        self.translate(dx, dy)
 
     @property
     def width(self):
@@ -248,7 +226,7 @@ class Box:
         sin_a = sin(radians)
 
         for p in self.points:
-            # p is like a C++ reference !!
+            # p is a reference
             x, y = p.x, p.y
             p.x = x*cos_a - y*sin_a 
             p.y = x*sin_a + y*cos_a
@@ -259,7 +237,7 @@ class Box:
             child.translate(dx, dy)
 
         for p in self.points:
-            # p is like a C++ reference !!
+            # p is a reference
             p.x += dx
             p.y += dy
 
@@ -272,8 +250,10 @@ class Box:
         if self.debug:
             p = path.rect(0, 0, 1, 1)
             priv_decoration = []
-            priv_decoration.append(trafo.scale(sx=self.width, sy=self.height))
-            priv_decoration.append(trafo.translate(self.__min_x(), self.__min_y()))
+            w, h = self.width, self.height
+            x, y = self.__min_x(), self.__min_y()
+            priv_decoration.append(trafo.scale(sx=w, sy=h))
+            priv_decoration.append(trafo.translate(x, y))
             priv_decoration.append(style.linestyle.dashed)
             canvas.stroke(p, priv_decoration)
             self.points[0].draw(canvas)
@@ -283,12 +263,12 @@ class Box:
 
 class Rectangle(Box):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, width=1, height=1, **kwargs):
 
-        super().__init__(*args, **kwargs)
-        self.points.append(Point(0, 1))
-        self.points.append(Point(1, 1))
-        self.points.append(Point(1, 0))
+        super().__init__(**kwargs)
+        self.points.append(Point(0, height))
+        self.points.append(Point(width, height))
+        self.points.append(Point(width, 0))
 
     def stretch(self, delta=0):
 
@@ -320,11 +300,11 @@ class Rectangle(Box):
 
 class Triangle(Box):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, width=1, height=1, **kwargs):
 
-        super().__init__(*args, **kwargs)
-        self.points.append(Point(0.5, 1))
-        self.points.append(Point(1, 0))
+        super().__init__(**kwargs)
+        self.points.append(Point(width/2, height))
+        self.points.append(Point(width, 0))
 
     def _draw(self, canvas):
 
@@ -341,10 +321,10 @@ class Triangle(Box):
 
 class Circle(Box):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, radius=1, **kwargs):
 
-        super().__init__(*args, **kwargs)
-        self.radius = 1
+        super().__init__(**kwargs)
+        self.radius = radius
         self.points.append(Point(0, 1))
         self.points.append(Point(1, 1))
         self.points.append(Point(1, 0))
@@ -357,59 +337,75 @@ class Circle(Box):
 
         super()._draw(canvas)
 
-        p = path.circle(0, 0, 0.5) # radius is required
+        p = path.circle(0, 0, 0.5)
         x1, y1 = self.origin + (self.width/2, self.height/2)
         self.decoration.append(trafo.scale(sx=self.width, sy=self.height))
         self.decoration.append(trafo.translate(x1, y1))
         canvas.stroke(p, self.decoration)
 
-class String(Box):
-
-    def __init__(self, py_string, size=text.size.normal, **kwargs):
-
-        super().__init__(**kwargs)
-        self.py_string = py_string
-        self.decoration.append(size)
-        self.decoration.append(text.valign.baseline)
-        self.initialize()
-
-    def initialize(self):
-
-        t = text.text(0, 0, self.py_string, self.decoration)
-        bb = t.bbox()
-
-        min_x, min_y = 0, 0
-        max_x, max_y = 100*bb.width().t, 100*bb.height().t
-
-        """
-        print("dimensions for", self.py_string, ":")
-        print("     {:8.3f} {:8.3f}".format(min_x, min_y))
-        print("     {:8.3f} {:8.3f}".format(max_x, max_y))
-        """
-
-        self.points.append(Point(min_x, max_y))
-        self.points.append(Point(max_x, max_y))
-        self.points.append(Point(max_x, min_y))
-
-    def decorate(self, element):
-
-        super().decorate(element)
-        self.initialize()
-
-    def flip(self, direct):
-
-        raise NotImplementedError("MetaPyx: String.flip")
-
-    def _draw(self, canvas):
-
-        super()._draw(canvas)
-
-        x1, y1 = self.points[0]
-        x2, y2 = self.points[3]
-        p = path.path(path.moveto(x1, y1), path.lineto(x2, y2))
-        canvas.draw(p, [deco.curvedtext(self.py_string, textattrs=self.decoration)])
 
 class Text(Rectangle):
+
+    Size_ratios = OrderedDict([
+        (text.size.Huge,         2.488),
+        (text.size.huge,         2.074),
+        (text.size.LARGE,        1.728),
+        (text.size.Large,        1.440),
+        (text.size.large,        1.200),
+        (text.size.normalsize,   1.000),
+        (text.size.small,        0.900),
+        (text.size.footnotesize, 0.800),
+        (text.size.scriptsize,   0.700),
+        (text.size.tiny,         0.500),
+        ])
+
+    class ScalingError(RuntimeError):
+
+        pass
+
+    class String(Box):
+
+        def __init__(self, py_string, size=text.size.normal, **kwargs):
+
+            super().__init__(**kwargs)
+            self.py_string = py_string
+            self.decoration.append(size)
+            self.decoration.append(text.valign.baseline)
+            self.initialize()
+
+        def initialize(self):
+
+            t = text.text(0, 0, self.py_string, self.decoration)
+            bb = t.bbox()
+
+            min_x, min_y = 0, 0
+            max_x, max_y = 100*bb.width().t, 100*bb.height().t
+
+            self.points.append(Point(min_x, max_y))
+            self.points.append(Point(max_x, max_y))
+            self.points.append(Point(max_x, min_y))
+
+        def flip(self, direct):
+
+            raise NotImplementedError("MetaPyx: String.flip")
+
+        def _draw(self, canvas):
+
+            super()._draw(canvas)
+
+            has_size = False
+            for d in self.decoration:
+                if isinstance(d, text.size):
+                    has_size = True
+                    break
+            if not has_size:
+                self.decorate(text.size.normalsize)
+
+            x1, y1 = self.points[0]
+            x2, y2 = self.points[3]
+            p = path.path(path.moveto(x1, y1), path.lineto(x2, y2))
+            canvas.draw(p, [deco.curvedtext(self.py_string, 
+                            textattrs=self.decoration)])
 
     def __init__(self,
                  *py_strings,
@@ -417,24 +413,24 @@ class Text(Rectangle):
                  alignment=Align.center,
                  **kwargs):
 
+        assert py_strings, "MetaPyx: Empty Text"
+
         super().__init__(**kwargs)
-        self.py_strings = py_strings if py_strings else []
+        self.py_strings = py_strings
         self.alignment = alignment
         self.size = size
+
+        self.longest_ = None
 
         self.dict_ = {}
 
         self.initialize()
+        self.find_longest()
+        self.stretch(0.1)
 
     def decorate(self):
 
         raise NotImplementedError("MetaPyx: Text.decorate")
-
-    def _size_index(self):
-
-        for i, sz in enumerate(TEXT_SIZES):
-            if self.size == sz:
-                return i
 
     def scale(self, factor):
 
@@ -444,48 +440,35 @@ class Text(Rectangle):
         new_height = factor * self.height
         new_width  = factor * self.width
 
-        super().scale(factor)
 
-        i = self._size_index()
+        my_ratio = 0
+        my_ratio = Text.Size_ratios[self.size]
 
-        if factor < 1:
-            sizes = TEXT_SIZES[0:i]
-        elif factor > 1:
-            sizes = TEXT_SIZES[i+1:]
+        for size, ratio in Text.Size_ratios.items():
 
-        """ create a list in reverse order of size: the goal is to get to
-        the greatest possible size that fits in the scaled box """
-        sizes.reverse()
+            if factor < ratio/my_ratio:
+                continue 
 
-        fits = False
+            longest_width = Text.String(self.longest_, size=size).width
+            if new_width < longest_width:
+                continue
 
-        for size in sizes:
+            """ if I got here using the new size does not overflow the box """
+            super().scale(factor)
 
-            max_width = 0
-            max_height = 0
-            height_sum = 0
+            self.size = size
+            self.children = []
+            self.dict_ = {}
+            return self.initialize()
 
-            for child in self.children:
-                child_string = String(child.py_string, size=size)
-                max_width = max(max_width, child_string.width)
-                max_height = max(max_height, child_string.height)
-                height_sum += child_string.height
-
-            #print(max_width, "<?", new_width)
-            if max_width < new_width:
-                break
-
-        self.children = []
-        self.dict_ = {}
-        self.size = size
-        self.initialize()
+        raise Text.ScalingError("MetaPyx: Text.scale cannot fit the text")
 
     def initialize(self):
 
         golden = 1.618034
 
         for py_string in self.py_strings:
-            string = String(py_string, size=self.size, debug=False)
+            string = Text.String(py_string, size=self.size, debug=False)
             self.dict_[py_string] = string
             self.add_child(string)
 
@@ -494,12 +477,14 @@ class Text(Rectangle):
 
         top_to_bottom(*self.children, alignment=self.alignment, delta=delta)
 
-        """
-        print("max width: {:8.3f}".format(max(c.width for c in self.children)))
-        print("height   : {:8.3f}".format(height))
-        print("delta:     {:8.3f}".format(delta))
-        """
-        self.stretch(delta)
+    def find_longest(self):
+
+        max_length = 0
+        for py_string, string in self.dict_.items():
+            length = string.width
+            if length > max_length:
+                max_length = length
+                self.longest_ = py_string
 
     def __getitem__(self, key):
         return self.dict_[key]
