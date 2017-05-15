@@ -1,7 +1,10 @@
+# TODO: Cleanup Text.__init__
+# TODO: Add more custom exceptions
+#
 from collections import OrderedDict
 from math import pi, cos, sin
 from enum import Enum
-from pyx import *
+import pyx
 
 class Align(Enum):
     left    =   1
@@ -56,8 +59,8 @@ class Point:
 
     def draw(self, canvas):
 
-        p = path.circle(self.x, self.y, 0.04)
-        canvas.stroke(p, [deco.filled([color.rgb.black])])
+        p = pyx.path.circle(self.x, self.y, 0.04)
+        canvas.stroke(p, [pyx.deco.filled([pyx.color.rgb.red])])
 
 
 class Box:
@@ -249,18 +252,34 @@ class Box:
     def _draw(self, canvas):
 
         if self.debug:
-            p = path.rect(0, 0, 1, 1)
+            p = pyx.path.rect(0, 0, 1, 1)
             priv_decoration = []
             w, h = self.width, self.height
             x, y = self.__min_x(), self.__min_y()
-            priv_decoration.append(trafo.scale(sx=w, sy=h))
-            priv_decoration.append(trafo.translate(x, y))
-            priv_decoration.append(style.linestyle.dashed)
+            priv_decoration.append(pyx.trafo.scale(sx=w, sy=h))
+            priv_decoration.append(pyx.trafo.translate(x, y))
+            priv_decoration.append(pyx.style.linestyle.dashed)
             canvas.stroke(p, priv_decoration)
             self.points[0].draw(canvas)
 
         """ Derived classes must specify the remainder """
 
+class Connection(Box):
+
+    def __init__(self, *points):
+
+        super().__init__()
+        self.points = points
+
+    def _draw(self, canvas):
+
+        start = self.points[0]
+        params = [pyx.path.moveto(start.x, start.y)]
+        
+        for point in self.points[1:]:
+            params.append(pyx.path.lineto(point.x, point.y))
+
+        canvas.stroke(pyx.path.path(*params), self.decoration)
 
 class Rectangle(Box):
 
@@ -271,30 +290,61 @@ class Rectangle(Box):
         self.points.append(Point(width, height))
         self.points.append(Point(width, 0))
 
+    def horizontal_stretch(self, delta=0):
+
+        if not self.children:
+            return
+
+        min_x = min(map(lambda c: c.origin.x, self.children))
+        max_x = max(map(lambda c: c.e.x, self.children))
+        min_y = min(map(lambda c: c.origin.y, self.children))
+        max_y = max(map(lambda c: c.n.y, self.children))
+
+        self.points[0] = Point(min_x-delta, self.points[0].y)
+        self.points[1] = Point(min_x-delta, self.points[1].y) 
+        self.points[2] = Point(max_x+delta, self.points[2].y)
+        self.points[3] = Point(max_x+delta, self.points[3].y)
+
+    def vertical_stretch(self, delta=0):
+
+        if not self.children:
+            return
+
+        min_x = min(map(lambda c: c.origin.x, self.children))
+        max_x = max(map(lambda c: c.e.x, self.children))
+        min_y = min(map(lambda c: c.origin.y, self.children))
+        max_y = max(map(lambda c: c.n.y, self.children))
+
+        self.points[0] = Point(self.points[0].x, min_y-delta)
+        self.points[1] = Point(self.points[1].x, max_y+delta)
+        self.points[2] = Point(self.points[2].x, max_y+delta)
+        self.points[3] = Point(self.points[3].x, min_y-delta)        
+
+
     def stretch(self, delta=0):
 
         if not self.children:
             return
 
         min_x = min(map(lambda c: c.origin.x, self.children))
-        min_y = min(map(lambda c: c.origin.y, self.children))
         max_x = max(map(lambda c: c.e.x, self.children))
+        min_y = min(map(lambda c: c.origin.y, self.children))
         max_y = max(map(lambda c: c.n.y, self.children))
 
         self.points[0] = Point(min_x-delta, min_y-delta)
         self.points[1] = Point(min_x-delta, max_y+delta)
         self.points[2] = Point(max_x+delta, max_y+delta)
-        self.points[3] = Point(max_x+delta, min_y-delta)
+        self.points[3] = Point(max_x+delta, min_y-delta)        
 
     def _draw(self, canvas):
 
         super()._draw(canvas)
 
         x, y = self.points[0].x, self.points[0].y
-        p = path.path(path.moveto(x, y))
+        p = pyx.path.path(pyx.path.moveto(x, y))
         for point in self.points[1:]:
-            p.append(path.lineto(point.x, point.y))
-        p.append(path.lineto(x, y))
+            p.append(pyx.path.lineto(point.x, point.y))
+        p.append(pyx.path.lineto(x, y))
 
         canvas.stroke(p, self.decoration)
 
@@ -312,11 +362,11 @@ class Triangle(Box):
         super()._draw(canvas)
 
         x, y = self.points[0].x, self.points[0].y
-        p = path.path(path.moveto(x, y))
+        p = pyx.path.path(pyx.path.moveto(x, y))
         for point in self.points[1:]:
             point.draw(canvas)
-            p.append(path.lineto(point.x, point.y))
-        p.append(path.lineto(x, y))
+            p.append(pyx.path.lineto(point.x, point.y))
+        p.append(pyx.path.lineto(x, y))
 
         canvas.stroke(p, self.decoration)
 
@@ -339,26 +389,26 @@ class Circle(Box):
 
         super()._draw(canvas)
 
-        p = path.circle(0, 0, 0.5)
+        p = pyx.path.circle(0, 0, 0.5)
         x1, y1 = self.origin + (self.width/2, self.height/2)
-        self.decoration.append(trafo.scale(sx=self.width, sy=self.height))
-        self.decoration.append(trafo.translate(x1, y1))
+        self.decoration.append(pyx.trafo.scale(sx=self.width, sy=self.height))
+        self.decoration.append(pyx.trafo.translate(x1, y1))
         canvas.stroke(p, self.decoration)
 
 
 class Text(Rectangle):
 
     Size_ratios = OrderedDict([
-        (text.size.Huge,         2.488),
-        (text.size.huge,         2.074),
-        (text.size.LARGE,        1.728),
-        (text.size.Large,        1.440),
-        (text.size.large,        1.200),
-        (text.size.normalsize,   1.000),
-        (text.size.small,        0.900),
-        (text.size.footnotesize, 0.800),
-        (text.size.scriptsize,   0.700),
-        (text.size.tiny,         0.500),
+        (pyx.text.size.Huge,         2.488),
+        (pyx.text.size.huge,         2.074),
+        (pyx.text.size.LARGE,        1.728),
+        (pyx.text.size.Large,        1.440),
+        (pyx.text.size.large,        1.200),
+        (pyx.text.size.normalsize,   1.000),
+        (pyx.text.size.small,        0.900),
+        (pyx.text.size.footnotesize, 0.800),
+        (pyx.text.size.scriptsize,   0.700),
+        (pyx.text.size.tiny,         0.500),
         ])
 
     class ScalingError(RuntimeError):
@@ -367,17 +417,17 @@ class Text(Rectangle):
 
     class String(Box):
 
-        def __init__(self, py_string, size=text.size.normal, **kwargs):
+        def __init__(self, py_string, size=pyx.text.size.normal, **kwargs):
 
             super().__init__(**kwargs)
             self.py_string = py_string
             self.decoration.append(size)
-            self.decoration.append(text.valign.baseline)
+            self.decoration.append(pyx.text.valign.baseline)
             self.initialize()
 
         def initialize(self):
 
-            t = text.text(0, 0, self.py_string, self.decoration)
+            t = pyx.text.text(0, 0, self.py_string, self.decoration)
             bb = t.bbox()
 
             min_x, min_y = 0, 0
@@ -397,21 +447,21 @@ class Text(Rectangle):
 
             has_size = False
             for d in self.decoration:
-                if isinstance(d, text.size):
+                if isinstance(d, pyx.text.size):
                     has_size = True
                     break
             if not has_size:
-                self.decorate(text.size.normalsize)
+                self.decorate(pyx.text.size.normalsize)
 
             x1, y1 = self.points[0]
             x2, y2 = self.points[3]
-            p = path.path(path.moveto(x1, y1), path.lineto(x2, y2))
-            canvas.draw(p, [deco.curvedtext(self.py_string, 
-                            textattrs=self.decoration)])
+            p = pyx.path.path(pyx.path.moveto(x1, y1), pyx.path.lineto(x2, y2))
+            canvas.draw(p, [pyx.deco.curvedtext(self.py_string,
+                                                textattrs=self.decoration)])
 
     def __init__(self,
                  *py_strings,
-                 size=text.size.normal,
+                 size=pyx.text.size.normal,
                  alignment=Align.center,
                  **kwargs):
 
@@ -455,15 +505,21 @@ class Text(Rectangle):
             if new_width < longest_width:
                 continue
 
-            """ if I got here using the new size does not overflow the box """
-            super().scale(factor)
+            """ break if you find a size that fits the requirements """
+            break
 
-            self.size = size
-            self.children = []
-            self.dict_ = {}
-            return self.initialize()
+        else:
+            """ the loop terminated normally """
 
-        raise Text.ScalingError("MetaPyx: Text.scale cannot fit the text")
+            raise Text.ScalingError("MetaPyx: Text.scale cannot fit the text")
+
+        super().scale(factor)
+
+        self.size = size
+        for string in self.children:
+            string.decoration = []
+            string.decoration.append(size)
+            string.decoration.append(pyx.text.valign.baseline)        
 
     def initialize(self):
 
@@ -475,9 +531,12 @@ class Text(Rectangle):
             self.add_child(string)
 
         height = max(child.height for child in self.children)
-        delta = 0.66*(golden - 1) * height
+        self.delta = 0.66*(golden - 1) * height
 
-        top_to_bottom(*self.children, alignment=self.alignment, delta=delta)
+        for kid in self.children:
+            kid.nw = self.nw + (self.delta, -self.delta)
+
+        top_to_bottom(*self.children, alignment=self.alignment, delta=self.delta)
 
     def find_longest(self):
 
@@ -493,7 +552,7 @@ class Text(Rectangle):
 
     def _draw(self, canvas):
 
-        """ avoid drawing the rectangle """
+        """ do not draw the rectangle """
         pass
 
 
