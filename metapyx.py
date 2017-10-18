@@ -290,15 +290,21 @@ class Rectangle(Box):
         self.points.append(Point(width, height))
         self.points.append(Point(width, 0))
 
+    def _get_boundaries(self):
+
+        min_x = min(c.origin.x for c in self.children)
+        max_x = max(c.e.x for c in self.children)
+        min_y = min(c.origin.y for c in self.children)
+        max_y = max(c.n.y for c in self.children)
+
+        return min_x, max_x, min_y, max_y
+
     def horizontal_stretch(self, delta=0):
 
         if not self.children:
             return
 
-        min_x = min(map(lambda c: c.origin.x, self.children))
-        max_x = max(map(lambda c: c.e.x, self.children))
-        min_y = min(map(lambda c: c.origin.y, self.children))
-        max_y = max(map(lambda c: c.n.y, self.children))
+        min_x, max_x, min_y, max_y = self._get_boundaries()
 
         self.points[0] = Point(min_x-delta, self.points[0].y)
         self.points[1] = Point(min_x-delta, self.points[1].y) 
@@ -310,10 +316,7 @@ class Rectangle(Box):
         if not self.children:
             return
 
-        min_x = min(map(lambda c: c.origin.x, self.children))
-        max_x = max(map(lambda c: c.e.x, self.children))
-        min_y = min(map(lambda c: c.origin.y, self.children))
-        max_y = max(map(lambda c: c.n.y, self.children))
+        min_x, max_x, min_y, max_y = self._get_boundaries()
 
         self.points[0] = Point(self.points[0].x, min_y-delta)
         self.points[1] = Point(self.points[1].x, max_y+delta)
@@ -326,10 +329,7 @@ class Rectangle(Box):
         if not self.children:
             return
 
-        min_x = min(map(lambda c: c.origin.x, self.children))
-        max_x = max(map(lambda c: c.e.x, self.children))
-        min_y = min(map(lambda c: c.origin.y, self.children))
-        max_y = max(map(lambda c: c.n.y, self.children))
+        min_x, max_x, min_y, max_y = self._get_boundaries()
 
         self.points[0] = Point(min_x-delta, min_y-delta)
         self.points[1] = Point(min_x-delta, max_y+delta)
