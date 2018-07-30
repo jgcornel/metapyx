@@ -389,7 +389,7 @@ class Circle(Box):
 
         super()._draw(canvas)
 
-        p = pyx.path.circle(0, 0, 0.5)
+        p = pyx.path.circle(0, 0, self.radius)
         x1, y1 = self.origin + (self.width/2, self.height/2)
         self.decoration.append(pyx.trafo.scale(sx=self.width, sy=self.height))
         self.decoration.append(pyx.trafo.translate(x1, y1))
