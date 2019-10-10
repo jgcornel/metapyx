@@ -373,13 +373,14 @@ class Triangle(Box):
 
 class Circle(Box):
 
-    def __init__(self, radius=1, **kwargs):
+    def __init__(self, radius=0.5, **kwargs):
 
         super().__init__(**kwargs)
         self.radius = radius
-        self.points.append(Point(0, 1))
-        self.points.append(Point(1, 1))
-        self.points.append(Point(1, 0))
+        diameter = 2*radius
+        self.points.append(Point(0, diameter))
+        self.points.append(Point(diameter, diameter))
+        self.points.append(Point(diameter, 0))
 
     def rotate(self, degrees):
 
@@ -389,7 +390,7 @@ class Circle(Box):
 
         super()._draw(canvas)
 
-        p = pyx.path.circle(0, 0, self.radius)
+        p = pyx.path.circle(0, 0, 0.5)
         x1, y1 = self.origin + (self.width/2, self.height/2)
         self.decoration.append(pyx.trafo.scale(sx=self.width, sy=self.height))
         self.decoration.append(pyx.trafo.translate(x1, y1))
