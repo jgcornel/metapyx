@@ -91,15 +91,6 @@ class Box:
     def __max_y(self):
         return max(p.y for p in self.points)
 
-    def translate(self, dx, dy):
-
-        for child in self.children:
-            child.translate(dx, dy)
-
-        for point in self.points:
-            point.x += dx
-            point.y += dy
-
     @property
     def origin(self):
         return self.points[0]
@@ -230,7 +221,6 @@ class Box:
         sin_a = sin(radians)
 
         for p in self.points:
-            # p is a reference
             x, y = p.x, p.y
             p.x = x*cos_a - y*sin_a 
             p.y = x*sin_a + y*cos_a
@@ -241,7 +231,6 @@ class Box:
             child.translate(dx, dy)
 
         for p in self.points:
-            # p is a reference
             p.x += dx
             p.y += dy
 
